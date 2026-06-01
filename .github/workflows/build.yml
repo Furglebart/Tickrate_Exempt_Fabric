@@ -10,6 +10,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,17 +21,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Find Gradle project
+        id: find_project
+        run: |
+          if [ -f "./gradlew" ]; then
+            echo "project_dir=." >> $GITHUB_OUTPUT
+          elif [ -f "./tickrate_exempt_fabric/gradlew" ]; then
+            echo "project_dir=./tickrate_exempt_fabric" >> $GITHUB_OUTPUT
+          else
+            echo "Could not find gradlew"
+            find . -maxdepth 3 -type f -name "gradlew"
+            exit 1
+          fi
 
       - name: Make Gradle wrapper executable
+        working-directory: ${{ steps.find_project.outputs.project_dir }}
         run: chmod +x ./gradlew
 
       - name: Build
+        working-directory: ${{ steps.find_project.outputs.project_dir }}
         run: ./gradlew build --stacktrace
 
       - name: Upload built jars
         uses: actions/upload-artifact@v4
         with:
           name: tickrateapi-fabric-jars
-          path: build/libs/*.jar
+          path: |
+            build/libs/*.jar
+            tickrate_exempt_fabric/build/libs/*.jar

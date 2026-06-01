@@ -21,18 +21,23 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Find Gradle project
+      - name: Find Gradle wrapper
         id: find_project
         run: |
-          if [ -f "./gradlew" ]; then
-            echo "project_dir=." >> $GITHUB_OUTPUT
-          elif [ -f "./tickrate_exempt_fabric/gradlew" ]; then
-            echo "project_dir=./tickrate_exempt_fabric" >> $GITHUB_OUTPUT
-          else
-            echo "Could not find gradlew"
-            find . -maxdepth 3 -type f -name "gradlew"
+          echo "Repository files:"
+          find . -maxdepth 4 -type f | sort
+
+          GRADLEW_PATH=$(find . -maxdepth 5 -type f -name "gradlew" | head -n 1)
+
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "ERROR: Could not find gradlew."
+            echo "Your project files may not have uploaded correctly."
             exit 1
           fi
+
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+          echo "Found Gradle project at: $PROJECT_DIR"
+          echo "project_dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
 
       - name: Make Gradle wrapper executable
         working-directory: ${{ steps.find_project.outputs.project_dir }}
@@ -46,6 +51,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tickrateapi-fabric-jars
-          path: |
-            build/libs/*.jar
-            tickrate_exempt_fabric/build/libs/*.jar
+          path: "**/build/libs/*.jar"
